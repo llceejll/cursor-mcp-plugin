@@ -1,0 +1,51 @@
+To:       Wheelzy@hotmail.com
+Subject:  Offline FAT32 formatter for 32 GB flash drives (package attached)
+Attach:   FAT32-Formatter-Offline-Package.zip  (21464 bytes)
+
+---------------------------------------------------------------
+Hi,
+
+Attached is an offline tool that formats 32 GB USB flash drives as FAT32.
+It needs no internet connection and no installation: it only uses tools that
+already come with Windows, macOS and Linux.
+
+WARNING: everything on a drive you choose is erased and cannot be recovered.
+The tool only lists USB drives of about 25-35 GB, never the computer's own
+drive, and asks you to type ERASE before it changes anything.
+
+WINDOWS (most common)
+  1. Save FAT32-Formatter-Offline-Package.zip. Right-click it, choose
+     Properties and tick "Unblock" if you see it, then Extract All.
+  2. Open the "windows" folder. Take ".txt" off the end of the two file names:
+         Format-Fat32.cmd.txt  ->  Format-Fat32.cmd
+         Format-Fat32.ps1.txt  ->  Format-Fat32.ps1
+     (The ".txt" was added only so e-mail systems do not block the scripts.)
+  3. Plug in the flash drive(s) and double-click Format-Fat32.cmd.
+     Click Yes when Windows asks for permission.
+  4. Type the number of the drive (or ALL) and press Enter, then type ERASE
+     and press Enter.
+  Not sure? Start it with -DryRun first (Format-Fat32.cmd -DryRun in a
+  Command Prompt). That only lists the drives and changes nothing.
+
+MAC AND LINUX
+  The steps are in README.txt inside the zip. In short: take ".txt" off
+  format-fat32.sh.txt, then run  sudo bash format-fat32.sh
+
+CHECKING THE FILES
+  SHA256SUMS.txt lists a fingerprint for every file; README.txt shows how to
+  compare them.
+
+WHAT IS IN THE ZIP
+  README.txt
+  SHA256SUMS.txt
+  windows\Format-Fat32.cmd.txt
+  windows\Format-Fat32.ps1.txt
+  macos/format-fat32.sh.txt
+  linux/format-fat32.sh.txt
+
+Thanks
+---------------------------------------------------------------
+
+On a phone: tap this link for a pre-addressed message, then attach the zip.
+(A link cannot carry an attachment, so its text is shorter.)
+mailto:Wheelzy@hotmail.com?subject=Offline%20FAT32%20formatter%20for%2032%20GB%20flash%20drives%20%28package%20attached%29&body=Hi%2C%0D%0A%0D%0AAttached%20is%20an%20offline%20tool%20that%20formats%2032%20GB%20USB%20flash%20drives%20as%20FAT32%20%28no%20internet%20needed%29.%20Open%20README.txt%20inside%20the%20zip%20for%20the%20steps.%0D%0A%0D%0AWARNING%3A%20it%20erases%20the%20drive%20you%20choose.%0D%0A%0D%0AThanks%0D%0A
