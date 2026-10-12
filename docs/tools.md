@@ -31,7 +31,7 @@ The hosted server at `https://mcp.browserless.io/mcp` exposes **14 tools** and *
 
 ### `browserless_smartscraper`
 
-Scrape a **single** page. `formats` is one or more of `markdown` (default), `html`, `links`, `screenshot`, and `pdf`. Handles JavaScript-heavy pages and anti-bot measures automatically.
+Scrape a **single** page. `formats` is one or more of `markdown` (the default), `html`, `rawText`, `links`, `screenshot`, and `pdf`. `rawText` is DOM text with `script`, `style`, and `noscript` removed. Handles JavaScript-heavy pages and anti-bot measures automatically.
 
 **Key params:** `url` (required), `formats`, `onlyMainContent`, `includeTags` / `excludeTags`, `headers`, `waitFor`, `profile`, `timeout`.
 
@@ -122,7 +122,7 @@ In-house skills cover `shadow-dom`, `cookie-consent`, `modals`, `snapshot-misses
 
 Run a Lighthouse audit. Returns scores and metrics for accessibility, best-practices, performance, PWA, and SEO. Supports [performance budgets](https://developer.chrome.com/docs/lighthouse/performance/performance-budgets). `device` is `mobile` (the default) or `desktop`. `config` is a Lighthouse config object; `categories` and `device` override the matching keys inside it.
 
-**Key params:** `url` (required), `categories`, `device`, `config`, `budgets`, `timeout`.
+**Key params:** `url` (required), `categories`, `device`, `config`, `budgets`, `timeout`, `profile`.
 
 > Audits typically take 30s–120s.
 
