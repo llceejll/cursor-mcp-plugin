@@ -1,0 +1,5 @@
+# Keep the built package byte-for-byte: the .eml needs CRLF line endings and the zips are binary.
+dist/*.zip binary
+dist/*.eml binary
+# Shell scripts must keep Unix line endings or bash cannot run them.
+*.sh text eol=lf
