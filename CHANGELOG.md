@@ -6,6 +6,7 @@ All notable changes to this plugin will be documented here.
 
 - Documented the `browserless_agent` session contract from MCP server v1.33.0: calls are one-shot unless the first call sets `keepSessionAlive: true`, and later calls continue that browser by passing the returned `sessionId`. Updated `docs/tools.md`, `examples/agent-research.md`, and the README prompts that assumed sessions stayed open by default.
 - Aligned the tool-set version in `docs/tools.md` with the 1.30.0 reconciliation already recorded in this changelog (it still said 1.28.1).
+- Documented the current `browserless_performance` `device` and `config` parameters, marked `browserless_crawl` as a Cloud-plan beta, moved crawl `formats` under `scrapeOptions`, and listed the `scrape-url` and `extract-content` prompts.
 
 ## 1.0.0 — initial release
 

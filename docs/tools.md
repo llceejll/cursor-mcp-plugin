@@ -31,7 +31,7 @@ The hosted server at `https://mcp.browserless.io/mcp` exposes **14 tools** and *
 
 ### `browserless_smartscraper`
 
-Scrape a **single** page and return HTML, markdown, raw DOM text, links, screenshots, or PDFs plus page metadata. Handles JavaScript-heavy pages and anti-bot measures automatically.
+Scrape a **single** page. `formats` is one or more of `markdown` (default), `html`, `links`, `screenshot`, and `pdf`. Handles JavaScript-heavy pages and anti-bot measures automatically.
 
 **Key params:** `url` (required), `formats`, `onlyMainContent`, `includeTags` / `excludeTags`, `headers`, `waitFor`, `profile`, `timeout`.
 
@@ -39,11 +39,11 @@ Scrape a **single** page and return HTML, markdown, raw DOM text, links, screens
 
 ### `browserless_crawl`
 
-Crawl a site from a seed URL and scrape every discovered page, following links to a configurable depth.
+Crawl a site from a seed URL and scrape every discovered page, following links to a configurable depth. Crawl is in beta and only available on Cloud plans.
 
 **Key params:** `url` (required), `limit`, `maxDepth`, `includePaths` / `excludePaths`, `allowSubdomains`, `allowExternalLinks`, `sitemap`, `delay`, `scrapeOptions`, `waitForCompletion`.
 
-> Crawl `https://docs.browserless.io` with `maxDepth: 3`, `limit: 50`, `formats: ["markdown"]`.
+> Crawl `https://docs.browserless.io` with `maxDepth: 3`, `limit: 50`, and `scrapeOptions: { formats: ["markdown"] }`.
 
 ### `browserless_map`
 
@@ -120,9 +120,9 @@ In-house skills cover `shadow-dom`, `cookie-consent`, `modals`, `snapshot-misses
 
 ### `browserless_performance`
 
-Run a Lighthouse audit. Returns scores and metrics for accessibility, best-practices, performance, PWA, and SEO. Supports [performance budgets](https://developer.chrome.com/docs/lighthouse/performance/performance-budgets).
+Run a Lighthouse audit. Returns scores and metrics for accessibility, best-practices, performance, PWA, and SEO. Supports [performance budgets](https://developer.chrome.com/docs/lighthouse/performance/performance-budgets). `device` is `mobile` (the default) or `desktop`. `config` is a Lighthouse config object; `categories` and `device` override the matching keys inside it.
 
-**Key params:** `url` (required), `categories`, `budgets`, `timeout`.
+**Key params:** `url` (required), `categories`, `device`, `config`, `budgets`, `timeout`.
 
 > Audits typically take 30s–120s.
 
@@ -175,7 +175,16 @@ Alongside its tools, the server exposes two read-only MCP resources. Tools are a
 | `browserless://status` | Browserless Service Status | `application/json` |
 | `browserless://api-docs` | Browserless API Documentation | `text/markdown` |
 
-Regenerate this list along with the tools:
+## Prompts
+
+The server also exposes two prompt templates:
+
+| Name | What it does |
+|---|---|
+| `scrape-url` | Scrape a page and summarize it |
+| `extract-content` | Extract specific information from a page using custom instructions |
+
+Regenerate the tool and resource lists:
 
 ```bash
 BROWSERLESS_TOKEN=your_token node scripts/verify-mcp.mjs
