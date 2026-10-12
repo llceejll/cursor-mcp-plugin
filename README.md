@@ -113,7 +113,7 @@ Drop these straight into Cursor chat once installed:
 
 ### 2. Multi-step research with the agent
 
-> Use the browserless agent to research the top 3 self-hosted vector databases on GitHub. For each, navigate to the repo, snapshot the README, and extract the license, language, and star count. Compare them in a table.
+> Use the browserless agent to research the top 3 self-hosted vector databases on GitHub. Set `keepSessionAlive: true` on the first call, then pass the returned `sessionId` on every later call. For each repo, snapshot the README and extract the license, language, and star count. Compare them in a table, then close the session.
 
 ### 3. Map and audit a site
 
@@ -125,7 +125,7 @@ More examples in [examples/](examples/).
 
 ## Why this server?
 
-- **Stateful agent loop** (`browserless_agent`) — one of the few MCP servers that gives an LLM a persistent browser session with snapshot/observe/act primitives, not just one-shot scraping.
+- **Agent loop** (`browserless_agent`) — snapshot/observe/act primitives for multi-step browsing. On MCP server v1.33.0 and later the browser is one-shot unless the first call sets `keepSessionAlive: true` and later calls pass the returned `sessionId`.
 - **100+ BrowserQL mutations** under the hood — anti-bot, residential proxy, captcha solving, session replay.
 - **Geo-targetable** — country / state / city-level proxying across 10,000+ cities.
 - **Built for production** — same backend that powers Browserless's enterprise self-hosted deployments.

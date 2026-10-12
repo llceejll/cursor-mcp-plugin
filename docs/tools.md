@@ -1,6 +1,6 @@
 # Browserless MCP — Tool Reference
 
-The hosted server at `https://mcp.browserless.io/mcp` exposes **14 tools** and **2 resources**, verified against `browserless-mcp` 1.28.1.
+The hosted server at `https://mcp.browserless.io/mcp` exposes **14 tools** and **2 resources**. The tool set below matches `browserless-mcp` 1.30.0 and the current hosted inventory (14 tools). Session lifetime for `browserless_agent` follows the v1.33.0 contract.
 
 > The authoritative schemas live on the running server — Cursor pulls them via the standard MCP `tools/list` call. Regenerate this list at any time with:
 >
@@ -83,17 +83,27 @@ Web, news, or image search via SearXNG, with optional per-result scraping. Geo-t
 
 ### `browserless_agent`
 
-A stateful, reasoning-driven browser session following a ReAct loop: **Reason → Act → Observe**.
+A reasoning-driven browser session following a ReAct loop: **Reason → Act → Observe**. On MCP server v1.33.0 and later the browser is one-shot unless you opt in. Earlier versions kept the session alive by default.
 
 1. Check for a site recipe via `browserless_skill { site: "<host>" }`
 2. `goto` to navigate
 3. `snapshot` to observe (returns interactive elements tagged `ref=` for regular CSS, `deep-ref=` for shadow DOM)
 4. Act — `click` / `type` / `select` / `evaluate`
-5. Re-snapshot if the page changed, `close` when done
+5. Re-snapshot if the page changed, then end the session when done
 
-**Selectors come from the snapshot, never from training data.** Use `commands: [...]` to batch sequential actions against the same page state.
+**Selectors come from the snapshot, never from training data.** Use `commands: [...]` to batch sequential actions against the same page state. A `goto` in the same batch can be followed by `snapshot` or `text`; do not reuse selectors from an old snapshot after a navigation.
 
-**Key params:** `method`, `params`, `commands`, `sessionId`, `profile`, `createProfile`, `proxy`, `record`, `allowedDomains`, `humanlike`, `os`.
+**Session lifetime (v1.33.0+).** After a successful command batch and download drain, the browser closes and frees its concurrency slot. That is the default when both `sessionId` and `keepSessionAlive` are omitted.
+
+| First call | Later calls | Result |
+|---|---|---|
+| Omit both | — | One-shot. The browser is gone when the call returns. Passing an id afterward cannot restore it. |
+| `keepSessionAlive: true` | Echo the returned `sessionId` | Same browser, cookies, and history. Repeating the flag is unnecessary; the id keeps it alive. |
+| `keepSessionAlive: true`, or a returned `sessionId` | `keepSessionAlive: false`, or a `close` command | Force-close, including a session you had kept open. |
+
+`keepSessionAlive` is ignored for profile creation (`createProfile`) and attached sessions (`attachSessionId`). A kept session still ends after 15 minutes idle. If download collection fails, the server keeps the session so you can retry `getDownloads` with the `sessionId` from the error, then close it.
+
+**Key params:** `method`, `params`, `commands`, `sessionId`, `keepSessionAlive`, `profile`, `createProfile`, `proxy`, `record`, `allowedDomains`, `humanlike`, `os`.
 
 ### `browserless_skill`
 
