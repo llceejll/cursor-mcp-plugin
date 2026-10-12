@@ -8,6 +8,7 @@ All notable changes to this plugin will be documented here.
 - Aligned the tool-set version in `docs/tools.md` with the 1.30.0 reconciliation already recorded in this changelog (it still said 1.28.1).
 - Documented the current `browserless_performance` `device` and `config` parameters, marked `browserless_crawl` as a Cloud-plan beta, moved crawl `formats` under `scrapeOptions`, and listed the `scrape-url` and `extract-content` prompts.
 - Kept `rawText` in the smart-scraper format list. It is still a server format; the public REST table omits it.
+- Named the `browserless_account` actions (`billing`, `keys`) and the `browserless_usage` timeframes (`hour`, `day`, `week`). Clarified that the 14-tool list is the hosted inventory; `browserless_live_url` and the Stripe Link tools exist in browserless-mcp 1.37.1 but are not part of that hosted list.
 
 ## 1.0.0 — initial release
 

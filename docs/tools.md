@@ -1,6 +1,6 @@
 # Browserless MCP — Tool Reference
 
-The hosted server at `https://mcp.browserless.io/mcp` exposes **14 tools** and **2 resources**. The tool set below matches `browserless-mcp` 1.30.0 and the current hosted inventory (14 tools). Session lifetime for `browserless_agent` follows the v1.33.0 contract.
+The hosted server at `https://mcp.browserless.io/mcp` exposes **14 tools** and **2 resources**, which is the inventory in Browserless's hosted setup guide. `browserless-mcp` 1.37.1 also registers `browserless_live_url` plus `browserless_link_connect` and `browserless_link_checkout`; the hosted guide still lists 14 tools, and Link checkout is not on the hosted fleet. Session lifetime follows the v1.33.0 contract. Parameter details the hosted guide omits, including `rawText`, come from the 1.37.1 schemas.
 
 > The authoritative schemas live on the running server — Cursor pulls them via the standard MCP `tools/list` call. Regenerate this list at any time with:
 >
@@ -136,13 +136,13 @@ These five tools are **read-only** and scoped to the account behind the configur
 
 Plan, unit balance, billing period, and the *names* of the account's API keys. Never returns API token values.
 
-**Key params:** `action` (required).
+**Key params:** `action` (required: `billing` or `keys`). `billing` returns the plan, unit balance, and billing period. `keys` returns API key names and ids, never token values.
 
 ### `browserless_usage`
 
 Request and unit consumption: successes, errors, timeouts, queueing, peak concurrency, captchas, proxy bytes, units.
 
-**Key params:** `timeframe`, `apiKeyIds`.
+**Key params:** `timeframe` (`hour`, `day`, or `week`; default `day`), `apiKeyIds`.
 
 ### `browserless_logs`
 
