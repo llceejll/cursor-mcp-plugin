@@ -1,0 +1,4 @@
+{
+  "name": "Browserless MCP plugin",
+  "install": "node --version\nnode --check scripts/verify-mcp.mjs\nnode --check scripts/build-deeplinks.mjs\nnode scripts/build-deeplinks.mjs >/dev/null"
+}
