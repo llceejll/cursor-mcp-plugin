@@ -120,7 +120,7 @@ In-house skills cover `shadow-dom`, `cookie-consent`, `modals`, `snapshot-misses
 
 ### `browserless_performance`
 
-Run a Lighthouse audit. Returns scores and metrics for accessibility, best-practices, performance, PWA, and SEO. Supports [performance budgets](https://developer.chrome.com/docs/lighthouse/performance/performance-budgets). `device` is `mobile` (the default) or `desktop`. `config` is a Lighthouse config object; `categories` and `device` override the matching keys inside it.
+Run a Lighthouse audit. Returns scores and metrics for accessibility, best-practices, performance, PWA, and SEO. Supports [performance budgets](https://web.dev/articles/use-lighthouse-for-performance-budgets). `device` is `mobile` (the default) or `desktop`. `config` is a Lighthouse config object; `categories` and `device` override the matching keys inside it.
 
 **Key params:** `url` (required), `categories`, `device`, `config`, `budgets`, `timeout`, `profile`.
 
