@@ -10,6 +10,7 @@ All notable changes to this plugin will be documented here.
 - Kept `rawText` in the smart-scraper format list. It is still a server format; the public REST table omits it.
 - Named the `browserless_account` actions (`billing`, `keys`) and the `browserless_usage` timeframes (`hour`, `day`, `week`). Clarified that the 14-tool list is the hosted inventory; `browserless_live_url` and the Stripe Link tools exist in browserless-mcp 1.37.1 but are not part of that hosted list.
 - Documented OAuth discovery on the host root. The MCP endpoint stays `https://mcp.browserless.io/mcp` (`POST` to the host root 404s). Protected-resource metadata is at `/.well-known/oauth-protected-resource` and `/.well-known/oauth-protected-resource/mcp`. The `resource_metadata` URL advertised on 401 (`/mcp/.well-known/oauth-protected-resource`) returns 404, so clients must not stop there. `scripts/verify-mcp.mjs --discover` checks the root chain without a token.
+- Added `patches/browserless-mcp-oauth-resource-metadata.patch`. It rewrites pinned mcp-proxy 6.5.1 so the 401 header uses the host-root metadata URL, without upgrading mcp-proxy (6.7.x breaks the OpenAI hosted importer). The hosted fleet does not include this patch yet.
 
 ## 1.0.0 — initial release
 

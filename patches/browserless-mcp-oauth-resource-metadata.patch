@@ -1,0 +1,149 @@
+From e2761c4c6acf33fdb552f19dc91691685c151d16 Mon Sep 17 00:00:00 2001
+From: Cursor Agent <cursoragent@cursor.com>
+Date: Tue, 13 Oct 2026 09:27:08 +0000
+Subject: [PATCH] fix: advertise OAuth metadata at the host root
+
+mcp-proxy 6.5.1 appends /.well-known/oauth-protected-resource to the MCP resource URL, so clients follow a path under /mcp that 404s. Rewrite that header to the RFC 9728 URL on the origin root without lifting the 6.5.1 pin.
+---
+ scripts/patch-fastmcp.mjs      | 88 +++++++++++++++++++++++++++++++++-
+ test/package-integrity.spec.ts | 12 +++++
+ 2 files changed, 99 insertions(+), 1 deletion(-)
+
+diff --git a/scripts/patch-fastmcp.mjs b/scripts/patch-fastmcp.mjs
+index c29fb23..710992a 100644
+--- a/scripts/patch-fastmcp.mjs
++++ b/scripts/patch-fastmcp.mjs
+@@ -15,6 +15,12 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+ //    response stream that stays open — the SSE stream each MCP session holds,
+ //    written on every keepalive ping — retains one promise per event until it
+ //    closes. Dropping the `return` pumps the stream the same way, unchained.
++// 3. mcp-proxy 6.5.1 builds WWW-Authenticate `resource_metadata` by appending
++//    `/.well-known/oauth-protected-resource` to the resource URL. For
++//    `https://host/mcp` that is `https://host/mcp/.well-known/...`, which
++//    404s. RFC 9728 §3.1 inserts the well-known segment between the host and
++//    the path. Stay on 6.5.1 — 6.7.x pulls @modelcontextprotocol/server and
++//    breaks the OpenAI hosted-MCP importer (#298) — and rewrite the URL here.
+ //
+ // This runs as postinstall and must find fastmcp wherever the consumer's
+ // package manager hoists it — under `npm ci` in a large tree it is NOT under
+@@ -94,13 +100,93 @@ try {
+     `[patch-fastmcp] SSE stream writer: mcp-proxy not resolvable (${err.code}); skipped\n`,
+   );
+ }
++// RFC 9728 §3.1: `/.well-known/oauth-protected-resource` goes between the host
++// and the resource path. Appended as a function so a second postinstall sees
++// `function resourceMetadataUrl` and does not wrap the call again.
++const RESOURCE_METADATA_HELPER = `function resourceMetadataUrl(resource) {
++  try {
++    const url = new URL(resource);
++    const path = url.pathname === "/" ? "" : url.pathname.replace(/\\/$/, "");
++    url.pathname = "/.well-known/oauth-protected-resource" + path;
++    url.search = "";
++    url.hash = "";
++    return url.toString();
++  } catch {
++    return resource + "/.well-known/oauth-protected-resource";
++  }
++}
++`;
++
++const BAD_RESOURCE_METADATA =
++  /\$\{([^{}]+)\}\/\.well-known\/oauth-protected-resource/g;
++
++function patchResourceMetadataUrl(dist) {
++  let changed = 0;
++  let alreadyApplied = false;
++  for (const file of readdirSync(dist).filter((f) =>
++    /\.(mjs|js|cjs)$/.test(f),
++  )) {
++    const path = join(dist, file);
++    const src = readFileSync(path, 'utf8');
++    BAD_RESOURCE_METADATA.lastIndex = 0;
++    if (!BAD_RESOURCE_METADATA.test(src)) {
++      if (src.includes('function resourceMetadataUrl(')) alreadyApplied = true;
++      continue;
++    }
++    BAD_RESOURCE_METADATA.lastIndex = 0;
++    let next = src.replace(
++      BAD_RESOURCE_METADATA,
++      '${resourceMetadataUrl($1)}',
++    );
++    if (!next.includes('function resourceMetadataUrl(')) {
++      const helper = `\n${RESOURCE_METADATA_HELPER}`;
++      const mapAt = next.lastIndexOf('//# sourceMappingURL=');
++      next =
++        mapAt === -1
++          ? next + helper
++          : `${next.slice(0, mapAt)}${helper}${next.slice(mapAt)}`;
++    }
++    writeFileSync(path, next);
++    changed++;
++  }
++
++  if (changed) {
++    process.stdout.write(
++      `[patch-fastmcp] OAuth resource_metadata: patched ${changed} file(s)\n`,
++    );
++    return;
++  }
++  if (alreadyApplied) {
++    process.stdout.write(
++      '[patch-fastmcp] OAuth resource_metadata: already patched\n',
++    );
++    return;
++  }
++  // 6.7.19+ builds this URL itself. Missing on 6.5.1 means the dist layout
++  // changed and clients would still be sent to the 404 path.
++  const version = readFileSync(join(dist, '..', 'package.json'), 'utf8');
++  const pinned = /"version"\s*:\s*"6\.5\.1"/.test(version);
++  if (pinned) {
++    throw new Error(
++      '[patch-fastmcp] OAuth resource_metadata: target not found in ' +
++        `${dist}; mcp-proxy 6.5.1 should append /.well-known to the resource ` +
++        'URL — update scripts/patch-fastmcp.mjs',
++    );
++  }
++  process.stderr.write(
++    `[patch-fastmcp] OAuth resource_metadata: concatenation not found in ${dist}; skipped\n`,
++  );
++}
++
+ if (mcpProxyEntry) {
++  const mcpProxyDist = dirname(mcpProxyEntry);
+   patch({
+     name: 'SSE stream writer',
+-    dist: dirname(mcpProxyEntry),
++    dist: mcpProxyDist,
+     files: /\.(mjs|js)$/,
+     from: 'else return reader.read().then(flow, handleStreamError);',
+     to: 'else reader.read().then(flow, handleStreamError);',
+     required: false,
+   });
++  patchResourceMetadataUrl(mcpProxyDist);
+ }
+diff --git a/test/package-integrity.spec.ts b/test/package-integrity.spec.ts
+index ae46faf..5e4f58f 100644
+--- a/test/package-integrity.spec.ts
++++ b/test/package-integrity.spec.ts
+@@ -86,6 +86,18 @@ describe('package integrity — installable by --omit=dev consumers', () => {
+     );
+   });
+ 
++  it('inserts OAuth protected-resource metadata at the host root', () => {
++    const sources = mcpProxySources();
++    expect(
++      sources.some((c) => c.includes('function resourceMetadataUrl(')),
++      'mcp-proxy dist should build resource_metadata with RFC 9728 insertion',
++    ).to.equal(true);
++    expect(
++      sources.some((c) => c.includes('}/.well-known/oauth-protected-resource')),
++      'no mcp-proxy dist file should append /.well-known after the resource path',
++    ).to.equal(false);
++  });
++
+   it("has unchained mcp-proxy's bundled SSE stream writer", () => {
+     const sources = mcpProxySources();
+     expect(
+-- 
+2.43.0
+

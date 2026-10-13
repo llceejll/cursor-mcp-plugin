@@ -26,7 +26,11 @@ Use either of these protected-resource documents. Both return 200 with the same 
 
 Authorization-server metadata is `https://mcp.browserless.io/.well-known/oauth-authorization-server`. Registration, authorize, and token URLs are `/oauth/register`, `/oauth/authorize`, and `/oauth/token` on that same host. The copies nested under `/mcp` return 404.
 
-An unauthenticated `POST` to `/mcp` answers 401 with `resource_metadata="https://mcp.browserless.io/mcp/.well-known/oauth-protected-resource"`. That URL 404s: it appends `/.well-known` after `/mcp` instead of inserting it at the host root. Clients that stop on that 404 never reach the authorization server. Ignore the advertised URL and use the host-root documents above. Check the chain without a token:
+An unauthenticated `POST` to `/mcp` answers 401 with `resource_metadata="https://mcp.browserless.io/mcp/.well-known/oauth-protected-resource"`. That URL 404s: mcp-proxy 6.5.1 appends `/.well-known` after `/mcp` instead of inserting it at the host root. Clients that stop on that 404 never reach the authorization server. Ignore the advertised URL and use the host-root documents above.
+
+The hosted server keeps mcp-proxy at 6.5.1 on purpose. mcp-proxy 6.7.x builds the root URL itself, but it also installs `@modelcontextprotocol/server`, which breaks OpenAI's hosted importer. [`patches/browserless-mcp-oauth-resource-metadata.patch`](../patches/browserless-mcp-oauth-resource-metadata.patch) rewrites the 6.5.1 header in place so it advertises `https://mcp.browserless.io/.well-known/oauth-protected-resource/mcp` (already 200). This plugin cannot deploy that change onto `mcp.browserless.io`.
+
+Check the chain without a token:
 
 ```bash
 node scripts/verify-mcp.mjs --discover
