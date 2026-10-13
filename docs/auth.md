@@ -17,7 +17,22 @@ The plugin declares no credentials at all:
 }
 ```
 
-Cursor discovers the server's OAuth metadata at `https://mcp.browserless.io/.well-known/oauth-protected-resource`, registers itself dynamically, and shows an **Authenticate** button. Clicking it opens the Browserless consent screen; approve, and Cursor stores the resulting tokens itself.
+The JSON-RPC endpoint stays `https://mcp.browserless.io/mcp`. `POST` to the host root (`https://mcp.browserless.io/`) returns 404, so do not move the server URL there. OAuth discovery is a different path, and it is served from the host root.
+
+Use either of these protected-resource documents. Both return 200 with the same body (`resource` `https://mcp.browserless.io/mcp`, authorization server `https://mcp.browserless.io`, scope `email`):
+
+- `https://mcp.browserless.io/.well-known/oauth-protected-resource`
+- `https://mcp.browserless.io/.well-known/oauth-protected-resource/mcp`
+
+Authorization-server metadata is `https://mcp.browserless.io/.well-known/oauth-authorization-server`. Registration, authorize, and token URLs are `/oauth/register`, `/oauth/authorize`, and `/oauth/token` on that same host. The copies nested under `/mcp` return 404.
+
+An unauthenticated `POST` to `/mcp` answers 401 with `resource_metadata="https://mcp.browserless.io/mcp/.well-known/oauth-protected-resource"`. That URL 404s: it appends `/.well-known` after `/mcp` instead of inserting it at the host root. Clients that stop on that 404 never reach the authorization server. Ignore the advertised URL and use the host-root documents above. Check the chain without a token:
+
+```bash
+node scripts/verify-mcp.mjs --discover
+```
+
+Cursor registers itself from that metadata and shows an **Authenticate** button. Clicking it opens the Browserless consent screen; approve, and Cursor stores the resulting tokens itself.
 
 **No token is ever committed to this repository, pasted into a config file, or written to disk in plaintext.** Tokens refresh automatically and can be revoked from your Browserless account.
 

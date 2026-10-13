@@ -4,16 +4,158 @@
 //   BROWSERLESS_TOKEN=... node scripts/verify-mcp.mjs
 //   BROWSERLESS_TOKEN=... node scripts/verify-mcp.mjs --exec
 //   BROWSERLESS_TOKEN=... node scripts/verify-mcp.mjs --json > tools.json
+//   node scripts/verify-mcp.mjs --discover
 //
 // Performs the same handshake Cursor performs after the plugin is installed:
 // initialize -> notifications/initialized -> tools/list, then prints the
 // advertised tools. With --exec, also calls browserless_smartscraper against
 // example.com to confirm a tool round-trips. Exits non-zero on any failure.
+//
+// --discover does not need a token. It checks OAuth metadata at the host
+// root. The 401 resource_metadata URL nests /.well-known under /mcp and
+// 404s; the documents that respond are on the origin root.
 
 const URL = process.env.BROWSERLESS_MCP_URL ?? "https://mcp.browserless.io/mcp";
 const TOKEN = process.env.BROWSERLESS_TOKEN;
 const EXEC = process.argv.includes("--exec");
 const JSON_OUT = process.argv.includes("--json");
+const DISCOVER = process.argv.includes("--discover");
+
+// RFC 9728 §3.1 inserts the well-known segment between the host and the path.
+function protectedResourceMetadataUrl(resource) {
+  const url = new globalThis.URL(resource);
+  const path = url.pathname === "/" ? "" : url.pathname.replace(/\/$/, "");
+  url.pathname = `/.well-known/oauth-protected-resource${path}`;
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
+
+function authorizationServerMetadataUrl(issuer) {
+  const url = new globalThis.URL(issuer);
+  const path = url.pathname === "/" ? "" : url.pathname.replace(/\/$/, "");
+  url.pathname = `/.well-known/oauth-authorization-server${path}`;
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
+
+function rootProtectedResourceUrl(resource) {
+  const url = new globalThis.URL(resource);
+  url.pathname = "/.well-known/oauth-protected-resource";
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
+
+async function getStatus(target) {
+  const res = await fetch(target, { method: "GET", redirect: "manual" });
+  const text = await res.text();
+  let body;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    body = text.slice(0, 200);
+  }
+  return { url: target, status: res.status, body };
+}
+
+async function discover() {
+  const endpoint = new globalThis.URL(URL);
+  const probe = await fetch(URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-06-18",
+        capabilities: {},
+        clientInfo: { name: "browserless-plugin-verify", version: "1.0.0" },
+      },
+    }),
+  });
+  const www = probe.headers.get("www-authenticate") ?? "";
+  const advertised = www.match(/resource_metadata="([^"]+)"/)?.[1] ?? null;
+  const advertisedResult = advertised ? await getStatus(advertised) : null;
+  const inserted = protectedResourceMetadataUrl(endpoint.toString());
+  const root = rootProtectedResourceUrl(endpoint.toString());
+  const insertedResult = await getStatus(inserted);
+  const rootResult = root === inserted ? insertedResult : await getStatus(root);
+
+  const metadata =
+    insertedResult.status === 200 && insertedResult.body?.authorization_servers
+      ? insertedResult.body
+      : rootResult.status === 200 && rootResult.body?.authorization_servers
+        ? rootResult.body
+        : null;
+  const issuer = metadata?.authorization_servers?.[0];
+  const authorizationServer = issuer
+    ? await getStatus(authorizationServerMetadataUrl(issuer))
+    : null;
+
+  const report = {
+    mcpEndpoint: URL,
+    mcpStatus: probe.status,
+    advertisedResourceMetadata: advertisedResult,
+    hostRootProtectedResource: rootResult,
+    pathInsertedProtectedResource: insertedResult,
+    authorizationServer,
+  };
+
+  const rootOk =
+    (rootResult.status === 200 && rootResult.body?.authorization_servers) ||
+    (insertedResult.status === 200 && insertedResult.body?.authorization_servers);
+  const authOk =
+    authorizationServer?.status === 200 &&
+    authorizationServer.body?.authorization_endpoint &&
+    authorizationServer.body?.token_endpoint;
+
+  if (JSON_OUT) {
+    console.log(JSON.stringify(report, null, 2));
+  } else {
+    console.log(`MCP endpoint ${URL} -> HTTP ${probe.status}`);
+    if (advertisedResult) {
+      console.log(
+        `Advertised resource_metadata -> HTTP ${advertisedResult.status} ${advertisedResult.url}`
+      );
+    } else {
+      console.log("Advertised resource_metadata -> (header missing)");
+    }
+    console.log(
+      `Host-root protected resource -> HTTP ${rootResult.status} ${rootResult.url}`
+    );
+    if (inserted !== root) {
+      console.log(
+        `Path-inserted protected resource -> HTTP ${insertedResult.status} ${insertedResult.url}`
+      );
+    }
+    if (authorizationServer) {
+      console.log(
+        `Authorization server -> HTTP ${authorizationServer.status} ${authorizationServer.url}`
+      );
+    }
+    if (advertisedResult && advertisedResult.status !== 200 && rootOk) {
+      console.log(
+        "\nThe 401 header points at a URL that does not serve metadata. Connect using the host-root documents above."
+      );
+    }
+  }
+
+  if (!rootOk || !authOk) {
+    console.error("OAuth discovery at the host root failed.");
+    process.exit(1);
+  }
+}
+
+if (DISCOVER) {
+  await discover();
+  if (!TOKEN) process.exit(0);
+}
 
 if (!TOKEN) {
   console.error("BROWSERLESS_TOKEN is not set.");
