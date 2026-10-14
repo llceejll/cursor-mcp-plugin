@@ -12,6 +12,7 @@ All notable changes to this plugin will be documented here.
 - Documented OAuth discovery on the host root. The MCP endpoint stays `https://mcp.browserless.io/mcp` (`POST` to the host root 404s). Protected-resource metadata is at `/.well-known/oauth-protected-resource` and `/.well-known/oauth-protected-resource/mcp`. The `resource_metadata` URL advertised on 401 (`/mcp/.well-known/oauth-protected-resource`) returns 404, so clients must not stop there. `scripts/verify-mcp.mjs --discover` checks the root chain without a token.
 - Added `patches/browserless-mcp-oauth-resource-metadata.patch`. It rewrites pinned mcp-proxy 6.5.1 so the 401 header uses the host-root metadata URL, without upgrading mcp-proxy (6.7.x breaks the OpenAI hosted importer). The hosted fleet does not include this patch yet.
 - Pointed the Lighthouse performance-budgets link at [web.dev](https://web.dev/articles/use-lighthouse-for-performance-budgets). The old `developer.chrome.com` URL returns 404.
+- Listed the in-house skills added in browserless-mcp: `autonomous-registration` and `auth-profile`. `captchas` and `agentic-checkout` stay limited to the Browserless cloud API.
 
 ## 1.0.0 — initial release
 

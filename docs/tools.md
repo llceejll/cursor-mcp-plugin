@@ -112,7 +112,7 @@ Loads Browserless agent skills on demand, or discovers site-specific recipes tun
 - `{ site: "<host>" }` — list recipes for that host, returned as pointers
 - `{ id: "<id>" }` — load a skill body, either an in-house skill or a `host/slug` site recipe
 
-In-house skills cover `shadow-dom`, `cookie-consent`, `modals`, `snapshot-misses`, `dynamic-content`, `screenshots`, `vision-fallback`, `tabs`, `autonomous-login`, `captchas`, and `file-transfers`.
+In-house skills cover `shadow-dom`, `cookie-consent`, `modals`, `snapshot-misses`, `dynamic-content`, `screenshots`, `vision-fallback`, `tabs`, `autonomous-login`, `autonomous-registration`, `auth-profile`, `captchas`, and `file-transfers`. Load `autonomous-registration` to create an account and `auth-profile` before saving a login profile. `captchas` and `agentic-checkout` only run against the Browserless cloud API.
 
 ---
 
