@@ -11,9 +11,11 @@
 // advertised tools. With --exec, also calls browserless_smartscraper against
 // example.com to confirm a tool round-trips. Exits non-zero on any failure.
 //
-// --discover does not need a token. It checks OAuth metadata at the host
-// root. The 401 resource_metadata URL nests /.well-known under /mcp and
-// 404s; the documents that respond are on the origin root.
+// --discover does not need a token. It follows the same recovery as
+// @modelcontextprotocol/sdk 1.32.1: the 401 resource_metadata URL nests
+// /.well-known under /mcp and 404s, and the client then uses the origin as
+// the authorization server. The protected-resource documents that respond
+// are on the origin root.
 
 const URL = process.env.BROWSERLESS_MCP_URL ?? "https://mcp.browserless.io/mcp";
 const TOKEN = process.env.BROWSERLESS_TOKEN;
@@ -43,6 +45,14 @@ function authorizationServerMetadataUrl(issuer) {
 function rootProtectedResourceUrl(resource) {
   const url = new globalThis.URL(resource);
   url.pathname = "/.well-known/oauth-protected-resource";
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
+
+function originAuthorizationServerUrl(resource) {
+  const url = new globalThis.URL(resource);
+  url.pathname = "/.well-known/oauth-authorization-server";
   url.search = "";
   url.hash = "";
   return url.toString();
@@ -97,6 +107,26 @@ async function discover() {
   const authorizationServer = issuer
     ? await getStatus(authorizationServerMetadataUrl(issuer))
     : null;
+  const originAsUrl = originAuthorizationServerUrl(endpoint.toString());
+  const originAuthorizationServer =
+    authorizationServer?.url === originAsUrl
+      ? authorizationServer
+      : await getStatus(originAsUrl);
+  const fallbackAuth =
+    originAuthorizationServer?.status === 200 &&
+    originAuthorizationServer.body?.authorization_endpoint &&
+    originAuthorizationServer.body?.token_endpoint
+      ? originAuthorizationServer.body
+      : null;
+  const resourceIndicator =
+    (insertedResult.status === 200 && insertedResult.body?.resource) ||
+    (rootResult.status === 200 && rootResult.body?.resource) ||
+    null;
+  const advertisedOk = advertisedResult?.status === 200;
+  // SDK 1.32.1 catches a 404 from an explicit resource_metadata URL and
+  // continues with the origin as the authorization server. That path omits
+  // protected-resource metadata, so the resource indicator is not sent.
+  const sdkCanStart = Boolean(fallbackAuth);
 
   const report = {
     mcpEndpoint: URL,
@@ -105,15 +135,13 @@ async function discover() {
     hostRootProtectedResource: rootResult,
     pathInsertedProtectedResource: insertedResult,
     authorizationServer,
+    sdkFallback: {
+      canStartOAuth: sdkCanStart,
+      authorizationServer: originAuthorizationServer,
+      resourceIndicator: advertisedOk ? resourceIndicator : null,
+      resourceIndicatorFromPathInsertion: resourceIndicator,
+    },
   };
-
-  const rootOk =
-    (rootResult.status === 200 && rootResult.body?.authorization_servers) ||
-    (insertedResult.status === 200 && insertedResult.body?.authorization_servers);
-  const authOk =
-    authorizationServer?.status === 200 &&
-    authorizationServer.body?.authorization_endpoint &&
-    authorizationServer.body?.token_endpoint;
 
   if (JSON_OUT) {
     console.log(JSON.stringify(report, null, 2));
@@ -134,20 +162,29 @@ async function discover() {
         `Path-inserted protected resource -> HTTP ${insertedResult.status} ${insertedResult.url}`
       );
     }
-    if (authorizationServer) {
+    if (originAuthorizationServer) {
       console.log(
-        `Authorization server -> HTTP ${authorizationServer.status} ${authorizationServer.url}`
+        `Authorization server -> HTTP ${originAuthorizationServer.status} ${originAuthorizationServer.url}`
       );
     }
-    if (advertisedResult && advertisedResult.status !== 200 && rootOk) {
+    if (sdkCanStart && advertisedResult && !advertisedOk) {
       console.log(
-        "\nThe 401 header points at a URL that does not serve metadata. Connect using the host-root documents above."
+        `\nSDK fallback can start OAuth. A 404 on the advertised metadata URL is caught; authorization continues at ${fallbackAuth.authorization_endpoint}.`
+      );
+      if (resourceIndicator) {
+        console.log(
+          `Path-inserted metadata still carries resource ${resourceIndicator}. Clients that pin the advertised URL drop that indicator.`
+        );
+      }
+    } else if (advertisedOk && sdkCanStart) {
+      console.log(
+        "\nAdvertised resource_metadata is reachable and the authorization server is up."
       );
     }
   }
 
-  if (!rootOk || !authOk) {
-    console.error("OAuth discovery at the host root failed.");
+  if (!sdkCanStart) {
+    console.error("OAuth discovery failed: authorization server metadata is missing.");
     process.exit(1);
   }
 }

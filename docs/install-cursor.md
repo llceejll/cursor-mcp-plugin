@@ -11,7 +11,7 @@ Requires Cursor 3.13 or later.
 
 Or run `/add-plugin browserless` in chat.
 
-The plugin authenticates with OAuth. Cursor should discover metadata at `https://mcp.browserless.io/.well-known/oauth-protected-resource` (host root), register itself, and handle the token exchange — there is no credential to paste and nothing stored in plaintext. The MCP URL stays `https://mcp.browserless.io/mcp`; do not point it at the host root. Re-authenticate at any time from **Settings → Plugins → Browserless**. See [docs/auth.md](auth.md) if discovery follows a URL under `/mcp` and gets a 404.
+The plugin authenticates with OAuth. Cursor registers itself and handles the token exchange — there is no credential to paste and nothing stored in plaintext. The MCP URL stays `https://mcp.browserless.io/mcp`; do not point it at the host root. The 401 `resource_metadata` URL under `/mcp` returns 404, and current MCP clients continue with the host-root authorization server (`https://mcp.browserless.io/.well-known/oauth-authorization-server`). Re-authenticate at any time from **Settings → Plugins → Browserless**. Details are in [docs/auth.md](auth.md).
 
 ## Manual install (fallback)
 
@@ -83,7 +83,7 @@ This runs the same `initialize` → `tools/list` handshake Cursor performs and p
 |---|---|---|
 | Plugin does not appear in Settings → Plugins | Cursor older than 3.13 | Update Cursor, or use the manual install above. |
 | `browserless` shows 0 tools | Not authenticated | Click **Authenticate** under **Settings → Plugins → Browserless**. For manual installs, re-check the `Authorization` header. |
-| Authenticate never finishes, or OAuth discovery 404s | The 401 `resource_metadata` URL is `https://mcp.browserless.io/mcp/.well-known/oauth-protected-resource`, which 404s | Use the host-root documents in [docs/auth.md](auth.md): `https://mcp.browserless.io/.well-known/oauth-protected-resource` and `https://mcp.browserless.io/.well-known/oauth-protected-resource/mcp`. Confirm with `node scripts/verify-mcp.mjs --discover`. |
+| Authenticate never finishes, or OAuth discovery 404s | The 401 `resource_metadata` URL 404s. Current clients still reach the host-root authorization server; a client that aborts on the 404 does not | Finish **Authenticate** in the browser. Confirm the fallback with `node scripts/verify-mcp.mjs --discover`. The host-root documents are in [docs/auth.md](auth.md). |
 | Tools enumerate but every call fails with 401 | Authorization revoked, or token expired | Re-authenticate in **Settings → Plugins → Browserless**, or generate a new token at [account.browserless.io](https://account.browserless.io). |
 | Tools enumerate but calls hit `429` | Account quota exceeded | Check usage in your Browserless dashboard; upgrade plan or wait for quota reset. |
 

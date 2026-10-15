@@ -151,7 +151,7 @@ BROWSERLESS_TOKEN=your_token node scripts/verify-mcp.mjs
 node scripts/verify-mcp.mjs --discover
 ```
 
-`--discover` needs no token. It checks OAuth metadata on the host root. The URL in the server's 401 `resource_metadata` parameter (`/mcp/.well-known/oauth-protected-resource`) returns 404; the documents that work are `/.well-known/oauth-protected-resource` and `/.well-known/oauth-protected-resource/mcp`.
+`--discover` needs no token. The 401 `resource_metadata` URL (`/mcp/.well-known/oauth-protected-resource`) returns 404. Current MCP clients catch that and continue at the host-root authorization server. Protected-resource metadata that includes the `resource` indicator is at `/.well-known/oauth-protected-resource` and `/.well-known/oauth-protected-resource/mcp`.
 
 ---
 
